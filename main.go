@@ -64,8 +64,22 @@ func activateAccount(w http.ResponseWriter, r *http.Request){
 	}
 	fmt.Println(accounts)
 }
-func updateAccount(w http.ResponseWriter, r *http.Request){}
-func deleteAccount(w http.ResponseWriter, r *http.Request){}
+func updateAccount(w http.ResponseWriter, r *http.Request){
+	i :=  stripVars(mux.Vars(r))
+	var a entities.Account
+	err := json.NewDecoder(r.Body).Decode(&a)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	account := accounts[i]
+	a, account = account, a
+	accounts[i] = account
+}
+func deleteAccount(w http.ResponseWriter, r *http.Request){
+	i :=  stripVars(mux.Vars(r))
+	delete(accounts, i)
+}
 func main() {
 
 	r := mux.NewRouter()
