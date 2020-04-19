@@ -4,6 +4,7 @@ import (
 	"CS445FinalProject/entities"
 	"encoding/json"
 	"fmt"
+	"time"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,6 +14,23 @@ import (
 
 var accountid, messageid, rideid, reportid, ratingid, joinrideid int
 var accounts = make(map[int]entities.Account)
+
+type shortenedAccount struct{
+		Aid int `json:"aid"`
+		Name string `json:"name"`
+		DateCreated string `json:"date_created"`
+		IsActive bool `json:"is_active"`
+}
+
+func cutAccount(aid int, a entities.Account) shortenedAccount{
+	var b = shortenedAccount{
+		aid,
+		a.FirstName + " " + a.LastName,
+		a.DateCreated,
+		a.IsActive,
+	}
+	return b
+}
 
 func stripVars(vars map[string]string) int {
 	i, err := strconv.Atoi(vars["accountid"])
@@ -36,6 +54,8 @@ func createAccount(w http.ResponseWriter, r *http.Request) {
 	}{
 		Aid: accountid,
 	}
+	dt := time.Now()
+	a.DateCreated = dt.Format("01-02-2006, 15:04:05")
 	accounts[accountid] = a
 	w.Header().Set("Content-Type", "application-json")
 	json.NewEncoder(w).Encode(counter)
@@ -80,6 +100,24 @@ func deleteAccount(w http.ResponseWriter, r *http.Request){
 	i :=  stripVars(mux.Vars(r))
 	delete(accounts, i)
 }
+func getAccounts(w http.ResponseWriter, r *http.Request){
+	query := r.URL.Query()
+	if len(query) != 0 {
+
+	} else {
+		cutted := make([]shortenedAccount, 0)
+		for key, value := range accounts {
+			a := cutAccount(key, value)
+			cutted = append(cutted, a)
+		}
+		w.Header().Set("Content-Type", "application-json")
+		json.NewEncoder(w).Encode(cutted)
+	}
+	
+}
+func searchAccounts(w http.ResponseWriter, r *http.Request){
+	fmt.Println(mux.Vars(r))
+}
 func main() {
 
 	r := mux.NewRouter()
@@ -88,6 +126,7 @@ func main() {
 	r.HandleFunc("/sar/accounts/{accountid}/status", activateAccount).Methods("PUT")
 	r.HandleFunc("/sar/accounts/{accountid}", updateAccount).Methods("PUT")
 	r.HandleFunc("/sar/accounts/{accountid}", deleteAccount).Methods("DELETE")
+	r.HandleFunc("/sar/accounts", getAccounts).Methods("GET") // this route handles both searching and getting all accounts
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 

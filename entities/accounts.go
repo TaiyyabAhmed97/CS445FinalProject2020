@@ -11,7 +11,9 @@ type Account struct {
 	Phone     string `json:"phone"`
 	Picture   string `json:"picture"`
 	IsActive  bool   `json:"is_active"`
+	DateCreated string `json:"date_created"`
 }
+
 
 //Getname returns name of object
 func (a Account) Getname() string {
@@ -29,3 +31,4 @@ func Create(first string, last string, phone string, picture string, active bool
 func (a Account) Print() {
 	fmt.Println(a.FirstName + "\n" + a.LastName + "\n" + a.Phone + "\n" + a.Picture + "\n")
 }
+
