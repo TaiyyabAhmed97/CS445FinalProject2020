@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"reflect"
+	"strings"
 	"log"
 	"net/http"
 	"strconv"
@@ -102,9 +104,11 @@ func deleteAccount(w http.ResponseWriter, r *http.Request){
 }
 func getAccounts(w http.ResponseWriter, r *http.Request){
 	query := r.URL.Query()
-	if len(query) != 0 {
-
-	} else {
+	if (len(query) != 0) {
+	q := searchAccounts(query["key"][0])
+	w.Header().Set("Content-Type", "application-json")
+	json.NewEncoder(w).Encode(q)
+		} else {
 		cutted := make([]shortenedAccount, 0)
 		for key, value := range accounts {
 			a := cutAccount(key, value)
@@ -115,8 +119,30 @@ func getAccounts(w http.ResponseWriter, r *http.Request){
 	}
 	
 }
-func searchAccounts(w http.ResponseWriter, r *http.Request){
-	fmt.Println(mux.Vars(r))
+func searchAccounts(key string) []shortenedAccount{
+	
+	matching := make([]shortenedAccount, 0)
+	for idx, v := range accounts {
+		flag := false
+		s := reflect.ValueOf(&v).Elem()
+		for i := 0; i < s.NumField(); i++ {
+			f := s.Field(i)
+			if f.Type().String() == "string" {
+				k := strings.ToLower(key)
+				val := strings.ToLower(fmt.Sprintf("%s", f.Interface()))
+				if(strings.Contains(val, k) == true){
+					flag = true
+				}
+			}
+		}
+		if(flag){
+			a := cutAccount(idx, v)
+			matching = append(matching, a)
+		}
+		
+	}
+	return matching
+	
 }
 func main() {
 
