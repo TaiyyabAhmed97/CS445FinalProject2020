@@ -144,15 +144,56 @@ func searchAccounts(key string) []shortenedAccount{
 	return matching
 	
 }
+func rateAccount(w http.ResponseWriter, r *http.Request){}
+func getDriverRatings(w http.ResponseWriter, r *http.Request){}
+func getRiderRatings(w http.ResponseWriter, r *http.Request) {}
+func postRide(w http.ResponseWriter, r *http.Request) {}
+func updateRide(w http.ResponseWriter, r *http.Request){}
+func deleteRide(w http.ResponseWriter, r *http.Request) {}
+func getRides(w http.ResponseWriter, r *http.Request) {}
+func getRide(w http.ResponseWriter, r *http.Request) {}
+func searchRides(keys map[string]string){}
+func joinRide(w http.ResponseWriter, r *http.Request) {}
+func confirmJoinRide(w http.ResponseWriter, r *http.Request) {}
+func addMessage(w http.ResponseWriter, r *http.Request) {}
+func getMessages(w http.ResponseWriter, r *http.Request) {}
 func main() {
 
 	r := mux.NewRouter()
+
+	// Account related endpoints
 	r.HandleFunc("/sar/accounts", createAccount).Methods("POST")
 	r.HandleFunc("/sar/accounts/{accountid}", getAccount).Methods("GET")
 	r.HandleFunc("/sar/accounts/{accountid}/status", activateAccount).Methods("PUT")
 	r.HandleFunc("/sar/accounts/{accountid}", updateAccount).Methods("PUT")
 	r.HandleFunc("/sar/accounts/{accountid}", deleteAccount).Methods("DELETE")
 	r.HandleFunc("/sar/accounts", getAccounts).Methods("GET") // this route handles both searching and getting all accounts
+	r.HandleFunc("/sar/accounts/{accountid}/ratings", rateAccount).Methods("POST") // rate account 
+	r.HandleFunc("/sar/accounts/{accountid}/driver", getDriverRatings).Methods("GET") // view driver account ratings 
+	r.HandleFunc("/sar/accounts/{accountid}/rider", getRiderRatings).Methods("GET") // view rider account ratings 
+
+	// end Account related Endpoints
+
+	// ***************************** //
+
+	// Rides related endpoints
+	r.HandleFunc("/sar/accounts/rides", postRide).Methods("POST") // Post a ride
+	r.HandleFunc("/sar/accounts/rides/{rideid}", updateRide).Methods("PUT") // Update s ride
+	r.HandleFunc("/sar/accounts/rides/{rideid}", deleteRide).Methods("DELETE") // Delete a ride
+	r.HandleFunc("/sar/accounts/rides", getRides).Methods("GET") // Get all rides && search rides with searchRides()
+	r.HandleFunc("/sar/accounts/rides/{rideid}", getRide).Methods("GET") // Get a ride
+	r.HandleFunc("/sar/accounts/rides/{rideid}/join_requests", joinRide).Methods("POST") // Request to join a ride
+	r.HandleFunc("/sar/accounts/rides/{rideid}/join_requests/{joinid}", confirmJoinRide).Methods("PATCH") // Confirm / Deny join request && confirm passenger pickup
+	r.HandleFunc("/sar/accounts/rides/{rideid}/messages", addMessage).Methods("POST") // Add a message to a ride
+	r.HandleFunc("/sar/accounts/rides/{rideid}/messages", getMessages).Methods("GET") // Get all rides && search rides with searchRides()
+	
+	// end Ride related Endpoints
+
+	// ***************************** //
+
+	// Reports related endpoints
+
+
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
