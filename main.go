@@ -16,6 +16,7 @@ import (
 
 var accountid, messageid, rideid, reportid, ratingid, joinrideid int
 var accounts = make(map[int]entities.Account)
+var rides = make(map[int]entities.Ride)
 
 type shortenedAccount struct{
 		Aid int `json:"aid"`
@@ -23,7 +24,27 @@ type shortenedAccount struct{
 		DateCreated string `json:"date_created"`
 		IsActive bool `json:"is_active"`
 }
-
+type shortenedRide struct {
+	Rid int `json:"rid"`
+	LocationInfo struct {
+		FromCity string `json:"from_city"`
+		FromZip  string `json:"from_zip"`
+		ToCity   string `json:"to_city"`
+		ToZip    string `json:"to_zip"`
+	} `json:"location_info"`
+	DateTime struct {
+		Date string `json:"date"`
+		Time string `json:"time"`
+	} `json:"date_time"`
+}
+func cutRide(rid int, a entities.Ride) shortenedRide{
+	var b = shortenedRide{
+		rid,
+		a.LocationInfo,
+		a.DateTime,
+	}
+	return b
+}
 func cutAccount(aid int, a entities.Account) shortenedAccount{
 	var b = shortenedAccount{
 		aid,
@@ -34,8 +55,8 @@ func cutAccount(aid int, a entities.Account) shortenedAccount{
 	return b
 }
 
-func stripVars(vars map[string]string) int {
-	i, err := strconv.Atoi(vars["accountid"])
+func stripVars(vars map[string]string, entity string) int {
+	i, err := strconv.Atoi(vars[entity +"id"])
 	if err != nil {
         // handle error
         fmt.Println(err)
@@ -64,14 +85,14 @@ func createAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAccount(w http.ResponseWriter, r *http.Request) {
-	i := stripVars(mux.Vars(r))
+	i := stripVars(mux.Vars(r), "account")
 	account := accounts[i]
 	w.Header().Set("Content-Type", "application-json")
 	json.NewEncoder(w).Encode(account)
 
 }
 func activateAccount(w http.ResponseWriter, r *http.Request){
-	i :=  stripVars(mux.Vars(r))
+	i :=  stripVars(mux.Vars(r), "account")
 	account := accounts[i]
 	var a entities.Account
 	err := json.NewDecoder(r.Body).Decode(&a)
@@ -87,7 +108,7 @@ func activateAccount(w http.ResponseWriter, r *http.Request){
 	fmt.Println(accounts)
 }
 func updateAccount(w http.ResponseWriter, r *http.Request){
-	i :=  stripVars(mux.Vars(r))
+	i :=  stripVars(mux.Vars(r), "account")
 	var a entities.Account
 	err := json.NewDecoder(r.Body).Decode(&a)
 	if err != nil {
@@ -99,7 +120,7 @@ func updateAccount(w http.ResponseWriter, r *http.Request){
 	accounts[i] = account
 }
 func deleteAccount(w http.ResponseWriter, r *http.Request){
-	i :=  stripVars(mux.Vars(r))
+	i :=  stripVars(mux.Vars(r), "account")
 	delete(accounts, i)
 }
 func getAccounts(w http.ResponseWriter, r *http.Request){
@@ -147,11 +168,56 @@ func searchAccounts(key string) []shortenedAccount{
 func rateAccount(w http.ResponseWriter, r *http.Request){}
 func getDriverRatings(w http.ResponseWriter, r *http.Request){}
 func getRiderRatings(w http.ResponseWriter, r *http.Request) {}
-func postRide(w http.ResponseWriter, r *http.Request) {}
-func updateRide(w http.ResponseWriter, r *http.Request){}
-func deleteRide(w http.ResponseWriter, r *http.Request) {}
-func getRides(w http.ResponseWriter, r *http.Request) {}
-func getRide(w http.ResponseWriter, r *http.Request) {}
+func postRide(w http.ResponseWriter, r *http.Request) {
+	var a entities.Ride
+	err := json.NewDecoder(r.Body).Decode(&a)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	rideid++
+	counter := struct {
+		Rid int `json:"rid"`
+	}{
+		Rid: rideid,
+	}
+	rides[rideid] = a
+	w.Header().Set("Content-Type", "application-json")
+	json.NewEncoder(w).Encode(counter)
+
+}
+func updateRide(w http.ResponseWriter, r *http.Request){
+	i :=  stripVars(mux.Vars(r), "ride")
+	var a entities.Ride
+	err := json.NewDecoder(r.Body).Decode(&a)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	ride := rides[i]
+	a, ride = ride, a
+	rides[i] = ride
+}
+func deleteRide(w http.ResponseWriter, r *http.Request) {
+	i :=  stripVars(mux.Vars(r), "ride")
+	delete(rides, i)
+}
+func getRides(w http.ResponseWriter, r *http.Request) {
+
+		cutted := make([]shortenedRide, 0)
+		for key, value := range rides {
+			a := cutRide(key, value)
+			cutted = append(cutted, a)
+		}
+		w.Header().Set("Content-Type", "application-json")
+		json.NewEncoder(w).Encode(cutted)
+}
+func getRide(w http.ResponseWriter, r *http.Request) {
+	i :=  stripVars(mux.Vars(r), "ride")
+	ride := rides[i]
+	a := entities.CreateRideDetail(ride, accounts[ride.Aid])
+
+}
 func searchRides(keys map[string]string){}
 func joinRide(w http.ResponseWriter, r *http.Request) {}
 func confirmJoinRide(w http.ResponseWriter, r *http.Request) {}
@@ -177,15 +243,15 @@ func main() {
 	// ***************************** //
 
 	// Rides related endpoints
-	r.HandleFunc("/sar/accounts/rides", postRide).Methods("POST") // Post a ride
-	r.HandleFunc("/sar/accounts/rides/{rideid}", updateRide).Methods("PUT") // Update s ride
-	r.HandleFunc("/sar/accounts/rides/{rideid}", deleteRide).Methods("DELETE") // Delete a ride
-	r.HandleFunc("/sar/accounts/rides", getRides).Methods("GET") // Get all rides && search rides with searchRides()
-	r.HandleFunc("/sar/accounts/rides/{rideid}", getRide).Methods("GET") // Get a ride
-	r.HandleFunc("/sar/accounts/rides/{rideid}/join_requests", joinRide).Methods("POST") // Request to join a ride
-	r.HandleFunc("/sar/accounts/rides/{rideid}/join_requests/{joinid}", confirmJoinRide).Methods("PATCH") // Confirm / Deny join request && confirm passenger pickup
-	r.HandleFunc("/sar/accounts/rides/{rideid}/messages", addMessage).Methods("POST") // Add a message to a ride
-	r.HandleFunc("/sar/accounts/rides/{rideid}/messages", getMessages).Methods("GET") // Get all rides && search rides with searchRides()
+	r.HandleFunc("/sar/rides", postRide).Methods("POST") // Post a ride
+	r.HandleFunc("/sar/rides/{rideid}", updateRide).Methods("PUT") // Update s ride
+	r.HandleFunc("/sar/rides/{rideid}", deleteRide).Methods("DELETE") // Delete a ride
+	r.HandleFunc("/sar/rides", getRides).Methods("GET") // Get all rides && search rides with searchRides()
+	r.HandleFunc("/sar/rides/{rideid}", getRide).Methods("GET") // Get a ride
+	r.HandleFunc("/sar/rides/{rideid}/join_requests", joinRide).Methods("POST") // Request to join a ride
+	r.HandleFunc("/sar/rides/{rideid}/join_requests/{joinid}", confirmJoinRide).Methods("PATCH") // Confirm / Deny join request && confirm passenger pickup
+	r.HandleFunc("/sar/rides/{rideid}/messages", addMessage).Methods("POST") // Add a message to a ride
+	r.HandleFunc("/sar/rides/{rideid}/messages", getMessages).Methods("GET") // Get all rides && search rides with searchRides()
 	
 	// end Ride related Endpoints
 
